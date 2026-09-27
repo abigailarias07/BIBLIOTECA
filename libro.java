@@ -16,14 +16,14 @@ public class libro {
         System.out.println("1. BUSCAR POR CATEGORIA");
         System.out.println("2. BUSCAR POR NOMBRE DEL LIBRO");
         System.out.println("3. BUSCAR POR AUTOR DEL LIBRO");
-        System.out.print("Selecciona una opción: ");
+        System.out.print("Selecciona una opción (Escribe 1, 2 o 3): ");
 
-        int opcion = teclado.nextInt();
-        teclado.nextLine(); 
+        // CORRECCIÓN: Leemos como texto para que nunca más se rompa el programa
+        String opcion = teclado.nextLine(); 
         boolean encontradoGlobal = false; 
 
-        // CORREGIDO: Se agregó el if inicial correspondiente a la opción 1
-        if (opcion == 1) {
+        // Evaluamos usando texto en lugar de números
+        if (opcion.equals("1")) {
             System.out.print("Escribe la categoría (programacion, medicina, contabilidad): ");
             String buscarCat = teclado.nextLine();
             System.out.println("\n--- Libros que coinciden ---");
@@ -34,7 +34,7 @@ public class libro {
                 }
             }
 
-        } else if (opcion == 2) {
+        } else if (opcion.equals("2")) {
             System.out.print("Escribe el nombre del libro o palabra clave: ");
             String buscarNombre = teclado.nextLine();
             System.out.println("\n--- Libros que coinciden ---");
@@ -45,7 +45,7 @@ public class libro {
                 }
             }
 
-        } else if (opcion == 3) {
+        } else if (opcion.equals("3")) {
             System.out.print("Escribe el nombre del autor: ");
             String buscarAutor = teclado.nextLine();
             System.out.println("\n--- Libros que coinciden ---");
@@ -87,6 +87,9 @@ public class libro {
                     System.out.println("\n(De no ser recojido en el lapso de 5 dias tu solicitud");
                     System.out.println("sera denegada y tendras que sacar una nueva )");
                     System.out.println("=======================================================");
+                    
+                    miVentana v = new miVentana();
+                    v.setVisible(true);
                     
                 } else {
                     System.out.println("[ALERTA] Ese libro no se encuentra en la lista de resultados.");
