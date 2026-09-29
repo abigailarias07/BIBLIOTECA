@@ -113,32 +113,47 @@ public class principalGUI extends JFrame {
         return panel;
     }
 
-    private void ingresar() {
-        String correo  = campoCorreo.getText().trim();
-        String nombre  = campoNombre.getText().trim();
-        String carrera = campoCarrera.getText().trim();
+private void ingresar() {
+    String correo  = campoCorreo.getText().trim();
+    String nombre  = campoNombre.getText().trim();
+    String carrera = campoCarrera.getText().trim();
 
-        if (!correo.endsWith("@certus.edu.pe")) {
-            mostrarMensaje("Correo no permitido. Inténtalo de nuevo.", Color.RED);
-            return;
-        }
-        if (nombre.isEmpty() || carrera.isEmpty()) {
-            mostrarMensaje("Completa todos los campos.", Color.RED);
-            return;
-        }
-
+    // CASO ESPECIAL: Si escribes "tilin", ingresa automáticamente
+    if (correo.equalsIgnoreCase("tilin")) {
         estudiante usuario = new estudiante();
-        usuario.correo = correo;
-        usuario.nombre = nombre;
-        usuario.carrera = carrera;
+        usuario.correo = "tilin@certus.edu.pe";
+        // Si no pusiste nombre o carrera, les asigna valores por defecto
+        usuario.nombre = nombre.isEmpty() ? "Tilin de Prueba" : nombre;
+        usuario.carrera = carrera.isEmpty() ? "Ingeniería de Sistemas" : carrera;
 
-        // Abre la interfaz de búsqueda y préstamo de libros
         miVentana ventanaLibros = new miVentana(usuario);
         ventanaLibros.setVisible(true);
-        
-        // Cierra la ventana del registro actual
         this.dispose();
+        return;
     }
+
+    // Validaciones normales para los demás correos
+    if (!correo.endsWith("@certus.edu.pe")) {
+        mostrarMensaje("Correo no permitido. Inténtalo de nuevo.", Color.RED);
+        return;
+    }
+    if (nombre.isEmpty() || carrera.isEmpty()) {
+        mostrarMensaje("Completa todos los campos.", Color.RED);
+        return;
+    }
+
+    estudiante usuario = new estudiante();
+    usuario.correo = correo;
+    usuario.nombre = nombre;
+    usuario.carrera = carrera;
+
+    // Abre la interfaz de búsqueda y préstamo de libros
+    miVentana ventanaLibros = new miVentana(usuario);
+    ventanaLibros.setVisible(true);
+    
+    // Cierra la ventana del registro actual
+    this.dispose();
+}
 
     private void mostrarMensaje(String texto, Color color) {
         mensaje.setForeground(color);

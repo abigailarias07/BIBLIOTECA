@@ -1,6 +1,8 @@
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class miVentana extends JFrame {
 
@@ -15,9 +17,7 @@ public class miVentana extends JFrame {
     private DefaultListModel<String> modeloResultados;
     private JList<String> listaResultados;
 
-
     private DefaultListModel<String> modeloHistorial = new DefaultListModel<>();
-
 
     public miVentana(estudiante usuario) {
         this.usuario = usuario;
@@ -88,9 +88,7 @@ public class miVentana extends JFrame {
         listaResultados.setFixedCellHeight(30);
 
         JScrollPane scroll = new JScrollPane(listaResultados);
-        scroll.setBorder(BorderFactory.createTitledBorder(
-                "Resultados"
-        ));
+        scroll.setBorder(BorderFactory.createTitledBorder("Resultados"));
 
         centro.add(busqueda, BorderLayout.NORTH);
         centro.add(scroll, BorderLayout.CENTER);
@@ -108,7 +106,7 @@ public class miVentana extends JFrame {
         JButton btnSeparar = new JButton("Separar Libro");
         JButton btnDevolver = new JButton("Devolver Libro");
         JButton btnCatalogo = new JButton("Ver Catálogo");
-        JButton btnHistorial = new JButton ("Historial");
+        JButton btnHistorial = new JButton("Historial");
 
         estilizarBoton(btnSeparar);
         estilizarBoton(btnDevolver);
@@ -120,7 +118,7 @@ public class miVentana extends JFrame {
         panel.add(btnDevolver);
         panel.add(btnCatalogo);
         add(panel, BorderLayout.SOUTH);
-    
+
         btnSeparar.addActionListener(e -> cambiarEstado("SEPARADO"));
         btnDevolver.addActionListener(e -> cambiarEstado("DISPONIBLE"));
         btnCatalogo.addActionListener(e -> mostrarCatalogo());
@@ -190,19 +188,22 @@ public class miVentana extends JFrame {
                             this,
                             nuevoEstado.equals("SEPARADO")
                                     ? "El libro ya se encuentra SEPARADO."
-                                    : "No puedes separar un libro que no has separado."
+                                    : "No puedes devolver un libro que no has separado."
                     );
                     return;
                 }
 
                 catalogo[i][3] = nuevoEstado;
 
+                LocalDateTime ahora = LocalDateTime.now();
+                DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy - hh:mm a");
+                String fechaFormateada = ahora.format(formato);
+
                 if (nuevoEstado.equals("SEPARADO")) {
                     int codigo = (int) (Math.random() * 9000) + 1000;
                     JOptionPane.showMessageDialog(
                             this,
-                            "¡Libro separado con éxito!\nCódigo: CE-" + codigo
-
+                            "¡Libro separado con éxito!\nCódigo: CE-" + codigo + "\nFecha/Hora: " + fechaFormateada
                     );
                 } else {
                     JOptionPane.showMessageDialog(
@@ -212,8 +213,10 @@ public class miVentana extends JFrame {
                 }
 
                 actualizarResultados();
-                String registro = "Usuario: " + usuario.nombre + " | Libro: " + titulo + " | Acción: " + nuevoEstado + " | Fecha/Hora: " + java.time.LocalDateTime.now()
-                .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy - hh:mm a"));
+
+                // Formato limpio sin iconos
+                String estadoTexto = nuevoEstado.equals("SEPARADO") ? "[SEPARADO]" : "[DEVUELTO]";
+                String registro = estadoTexto + "  " + titulo + "  •  Usuario: " + usuario.nombre + "  •  " + fechaFormateada;
                 modeloHistorial.add(0, registro);
                 return;
             }
@@ -228,25 +231,106 @@ public class miVentana extends JFrame {
         }
     }
 
+    // =========================================================================
+    //         APARTADO DE HISTORIAL SIN ICONOS (SOLO TEXTO Y FONDO AZUL)
+    // =========================================================================
     private void mostrarHistorial() {
+        if (modeloHistorial.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Aún no hay movimientos registrados en esta sesión.",
+                    "Historial Vacío",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            return;
+        }
 
-    if (modeloHistorial.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Aún no hay movimientos registrados.");
-        return;
+        // Panel de información del usuario en la parte superior sin iconos
+        JPanel panelUsuario = new JPanel(new GridLayout(2, 1, 2, 2));
+        panelUsuario.setBackground(AZUL);
+        panelUsuario.setBorder(new EmptyBorder(0, 0, 10, 0));
+
+        JLabel lblUsuario = new JLabel("Usuario: " + usuario.nombre + " (" + usuario.carrera + ")", SwingConstants.LEFT);
+        lblUsuario.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblUsuario.setForeground(Color.WHITE);
+
+        JLabel lblCorreo = new JLabel("Correo: " + usuario.correo, SwingConstants.LEFT);
+        lblCorreo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblCorreo.setForeground(new Color(225, 232, 245));
+
+        panelUsuario.add(lblUsuario);
+        panelUsuario.add(lblCorreo);
+
+        // Lista del historial de transacciones en texto limpio
+        JList<String> listaHistorial = new JList<>(modeloHistorial);
+        listaHistorial.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        listaHistorial.setBackground(Color.WHITE);
+        listaHistorial.setForeground(AZUL);
+        listaHistorial.setSelectionBackground(AZUL);
+        listaHistorial.setSelectionForeground(Color.WHITE);
+        listaHistorial.setFixedCellHeight(32);
+
+        // Scroll Pane con bordes blancos
+        JScrollPane scroll = new JScrollPane(listaHistorial);
+        scroll.setPreferredSize(new Dimension(620, 240));
+        scroll.getViewport().setBackground(Color.WHITE);
+        scroll.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(Color.WHITE, 2),
+                " Movimientos Recientes ",
+                javax.swing.border.TitledBorder.LEFT,
+                javax.swing.border.TitledBorder.TOP,
+                new Font("Segoe UI", Font.BOLD, 13),
+                Color.WHITE
+        ));
+
+        // Panel interno contenedor azul
+        JPanel panelHistorial = new JPanel(new BorderLayout());
+        panelHistorial.setBackground(AZUL);
+        panelHistorial.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panelHistorial.add(panelUsuario, BorderLayout.NORTH);
+        panelHistorial.add(scroll, BorderLayout.CENTER);
+
+        // Ajustar UIManager para pintar el fondo exterior del diálogo de Azul
+        UIManager.put("OptionPane.background", AZUL);
+        UIManager.put("Panel.background", AZUL);
+
+        // Crear el JOptionPane personalizado
+        JOptionPane optionPane = new JOptionPane(
+                panelHistorial,
+                JOptionPane.PLAIN_MESSAGE,
+                JOptionPane.DEFAULT_OPTION,
+                null,
+                new Object[]{}, 
+                null
+        );
+
+        JDialog dialog = optionPane.createDialog(this, "Historial de Transacciones");
+        dialog.getContentPane().setBackground(AZUL);
+
+        // Botón "Cerrar" personalizado
+        JButton btnCerrar = new JButton("Cerrar");
+        btnCerrar.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnCerrar.setForeground(AZUL);
+        btnCerrar.setBackground(Color.WHITE);
+        btnCerrar.setFocusPainted(false);
+        btnCerrar.setBorderPainted(false);
+        btnCerrar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnCerrar.setPreferredSize(new Dimension(100, 32));
+        btnCerrar.addActionListener(e -> dialog.dispose());
+
+        JPanel panelBoton = new JPanel();
+        panelBoton.setBackground(AZUL);
+        panelBoton.setBorder(new EmptyBorder(12, 0, 0, 0));
+        panelBoton.add(btnCerrar);
+
+        panelHistorial.add(panelBoton, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+
+        // Restaurar UIManager por defecto
+        UIManager.put("OptionPane.background", null);
+        UIManager.put("Panel.background", null);
     }
-
-    JList<String> lista = new JList<>(modeloHistorial);
-    JScrollPane scroll = new JScrollPane(lista);
-
-    scroll.setPreferredSize(new Dimension(600, 250));
-
-    JOptionPane.showMessageDialog(
-            this,
-            scroll,
-            "Historial",
-            JOptionPane.INFORMATION_MESSAGE
-    );
-}
 
     private void estilizarBoton(JButton boton) {
         boton.setFont(new Font("Segoe UI", Font.BOLD, 13));
