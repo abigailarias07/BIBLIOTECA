@@ -15,8 +15,8 @@ public class miVentana extends JFrame {
     private DefaultListModel<String> modeloResultados;
     private JList<String> listaResultados;
 
-    
-    private DefaultListModel modeloHistorial = new DefaultListModel<>();
+
+    private DefaultListModel<String> modeloHistorial = new DefaultListModel<>();
 
 
     public miVentana(estudiante usuario) {
@@ -108,19 +108,23 @@ public class miVentana extends JFrame {
         JButton btnSeparar = new JButton("Separar Libro");
         JButton btnDevolver = new JButton("Devolver Libro");
         JButton btnCatalogo = new JButton("Ver Catálogo");
+        JButton btnHistorial = new JButton ("Historial");
 
         estilizarBoton(btnSeparar);
         estilizarBoton(btnDevolver);
         estilizarBoton(btnCatalogo);
+        estilizarBoton(btnHistorial);
 
+        panel.add(btnHistorial);
         panel.add(btnSeparar);
         panel.add(btnDevolver);
         panel.add(btnCatalogo);
         add(panel, BorderLayout.SOUTH);
-
+    
         btnSeparar.addActionListener(e -> cambiarEstado("SEPARADO"));
         btnDevolver.addActionListener(e -> cambiarEstado("DISPONIBLE"));
         btnCatalogo.addActionListener(e -> mostrarCatalogo());
+        btnHistorial.addActionListener(e -> mostrarHistorial());
     }
 
     private void buscarLibros() {
@@ -186,7 +190,7 @@ public class miVentana extends JFrame {
                             this,
                             nuevoEstado.equals("SEPARADO")
                                     ? "El libro ya se encuentra SEPARADO."
-                                    : "El libro ya se encuentra DISPONIBLE."
+                                    : "No puedes separar un libro que no has separado."
                     );
                     return;
                 }
@@ -208,8 +212,9 @@ public class miVentana extends JFrame {
                 }
 
                 actualizarResultados();
-                String registro = "Usuario: " + usuario.nombre + " | Libro: " + titulo + " | Acción: " + nuevoEstado + " | Fecha/Hora: " + java.time.LocalDateTime.now();
-                System.out.println("Historial guardado: " + registro);
+                String registro = "Usuario: " + usuario.nombre + " | Libro: " + titulo + " | Acción: " + nuevoEstado + " | Fecha/Hora: " + java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy - hh:mm a"));
+                modeloHistorial.add(0, registro);
                 return;
             }
         }
@@ -222,6 +227,26 @@ public class miVentana extends JFrame {
             buscarLibros();
         }
     }
+
+    private void mostrarHistorial() {
+
+    if (modeloHistorial.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Aún no hay movimientos registrados.");
+        return;
+    }
+
+    JList<String> lista = new JList<>(modeloHistorial);
+    JScrollPane scroll = new JScrollPane(lista);
+
+    scroll.setPreferredSize(new Dimension(600, 250));
+
+    JOptionPane.showMessageDialog(
+            this,
+            scroll,
+            "Historial",
+            JOptionPane.INFORMATION_MESSAGE
+    );
+}
 
     private void estilizarBoton(JButton boton) {
         boton.setFont(new Font("Segoe UI", Font.BOLD, 13));
