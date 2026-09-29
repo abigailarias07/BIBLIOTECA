@@ -15,6 +15,10 @@ public class miVentana extends JFrame {
     private DefaultListModel<String> modeloResultados;
     private JList<String> listaResultados;
 
+    
+    private DefaultListModel modeloHistorial = new DefaultListModel<>();
+
+
     public miVentana(estudiante usuario) {
         this.usuario = usuario;
 
@@ -194,6 +198,7 @@ public class miVentana extends JFrame {
                     JOptionPane.showMessageDialog(
                             this,
                             "¡Libro separado con éxito!\nCódigo: CE-" + codigo
+
                     );
                 } else {
                     JOptionPane.showMessageDialog(
@@ -203,6 +208,8 @@ public class miVentana extends JFrame {
                 }
 
                 actualizarResultados();
+                String registro = "Usuario: " + usuario.nombre + " | Libro: " + titulo + " | Acción: " + nuevoEstado + " | Fecha/Hora: " + java.time.LocalDateTime.now();
+                System.out.println("Historial guardado: " + registro);
                 return;
             }
         }
