@@ -3,6 +3,10 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class miVentana extends JFrame {
 
@@ -126,44 +130,106 @@ public class miVentana extends JFrame {
     }
 
     private void buscarLibros() {
-        String texto = txtBuscar.getText().trim().toLowerCase();
 
-        modeloResultados.clear();
+    String texto = txtBuscar.getText().trim();
 
-        if (texto.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ingresa un término para buscar.");
-            return;
-        }
+    modeloResultados.clear();
 
-        int columna = cbCriterio.getSelectedIndex();
+    if (texto.isEmpty()) {
+        JOptionPane.showMessageDialog(
+                this,
+                "Ingresa un término para buscar."
+        );
+        return;
+    }
 
-        for (int i = 0; i < catalogo.length; i++) {
-            if (catalogo[i][columna].toLowerCase().contains(texto)) {
-                agregarResultado(i);
-            }
+    String columna;
+
+    int criterio = cbCriterio.getSelectedIndex();
+
+    if (criterio == 0) {
+        columna = "titulo";
+    } else if (criterio == 1) {
+        columna = "autor";
+    } else {
+        columna = "categoria";
+    }
+
+    String sql =
+            "SELECT titulo, autor, categoria, estado " +
+            "FROM libros " +
+            "WHERE " + columna + " LIKE ?";
+
+    try (
+        Connection conexion = ConexionSQLite.conectar();
+        PreparedStatement ps = conexion.prepareStatement(sql)
+    ) {
+
+        ps.setString(1, "%" + texto + "%");
+
+        ResultSet rs = ps.executeQuery();
+
+        while (rs.next()) {
+
+            String resultado =
+                    rs.getString("titulo") + " | "
+                    + rs.getString("autor") + " | "
+                    + rs.getString("categoria") + " | "
+                    + rs.getString("estado");
+
+            modeloResultados.addElement(resultado);
         }
 
         if (modeloResultados.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No se encontraron libros.");
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No se encontraron libros."
+            );
         }
-    }
 
-    private void mostrarCatalogo() {
-        modeloResultados.clear();
+    } catch (SQLException e) {
 
-        for (int i = 0; i < catalogo.length; i++) {
-            agregarResultado(i);
-        }
-    }
-
-    private void agregarResultado(int i) {
-        modeloResultados.addElement(
-                catalogo[i][0] + " | "
-                + catalogo[i][1] + " | "
-                + catalogo[i][2] + " | "
-                + catalogo[i][3]
+        JOptionPane.showMessageDialog(
+                this,
+                "Error al buscar: " + e.getMessage()
         );
     }
+}
+    private void mostrarCatalogo() {
+
+    modeloResultados.clear();
+
+    String sql =
+            "SELECT titulo, autor, categoria, estado " +
+            "FROM libros";
+
+    try (
+        Connection conexion = ConexionSQLite.conectar();
+        PreparedStatement ps = conexion.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery()
+    ) {
+
+        while (rs.next()) {
+
+            String resultado =
+                    rs.getString("titulo") + " | "
+                    + rs.getString("autor") + " | "
+                    + rs.getString("categoria") + " | "
+                    + rs.getString("estado");
+
+            modeloResultados.addElement(resultado);
+        }
+
+    } catch (SQLException e) {
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Error al mostrar catálogo: " + e.getMessage()
+        );
+    }
+}
+
+    
 
     private String obtenerTituloSeleccionado() {
         String seleccionado = listaResultados.getSelectedValue();

@@ -161,6 +161,7 @@ private void ingresar() {
     }
 
     public static void main(String[] args) {
+        
         ConexionSQLite.crearTablas();
         SwingUtilities.invokeLater(() -> new principalGUI().setVisible(true));
     }
