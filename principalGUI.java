@@ -163,6 +163,7 @@ private void ingresar() {
     public static void main(String[] args) {
         
         ConexionSQLite.crearTablas();
+        ConexionSQLite.insertarLibrosIniciales();
         SwingUtilities.invokeLater(() -> new principalGUI().setVisible(true));
     }
 }

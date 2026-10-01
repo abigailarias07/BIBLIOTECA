@@ -4,16 +4,14 @@ import java.awt.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 public class miVentana extends JFrame {
 
     private static final Color AZUL = new Color(30, 60, 114);
     private static final Color FONDO = new Color(245, 247, 250);
 
-    private String[][] catalogo = new libro().getCatalogo();
     private estudiante usuario;
 
     private JComboBox<String> cbCriterio;
@@ -131,105 +129,46 @@ public class miVentana extends JFrame {
 
     private void buscarLibros() {
 
-    String texto = txtBuscar.getText().trim();
+        String texto = txtBuscar.getText().trim();
+        modeloResultados.clear();
 
-    modeloResultados.clear();
-
-    if (texto.isEmpty()) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Ingresa un término para buscar."
-        );
-        return;
-    }
-
-    String columna;
-
-    int criterio = cbCriterio.getSelectedIndex();
-
-    if (criterio == 0) {
-        columna = "titulo";
-    } else if (criterio == 1) {
-        columna = "autor";
-    } else {
-        columna = "categoria";
-    }
-
-    String sql =
-            "SELECT titulo, autor, categoria, estado " +
-            "FROM libros " +
-            "WHERE " + columna + " LIKE ?";
-
-    try (
-        Connection conexion = ConexionSQLite.conectar();
-        PreparedStatement ps = conexion.prepareStatement(sql)
-    ) {
-
-        ps.setString(1, "%" + texto + "%");
-
-        ResultSet rs = ps.executeQuery();
-
-        while (rs.next()) {
-
-            String resultado =
-                    rs.getString("titulo") + " | "
-                    + rs.getString("autor") + " | "
-                    + rs.getString("categoria") + " | "
-                    + rs.getString("estado");
-
-            modeloResultados.addElement(resultado);
+        if (texto.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Ingresa un término para buscar.");
+            return;
         }
 
-        if (modeloResultados.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "No se encontraron libros."
-            );
+        try {
+            ArrayList<String> resultados =
+                    libro.buscar(cbCriterio.getSelectedIndex(), texto);
+
+            for (String resultado : resultados) {
+                modeloResultados.addElement(resultado);
+            }
+
+            if (resultados.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No se encontraron libros.");
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al buscar: " + e.getMessage());
         }
-
-    } catch (SQLException e) {
-
-        JOptionPane.showMessageDialog(
-                this,
-                "Error al buscar: " + e.getMessage()
-        );
     }
-}
+
     private void mostrarCatalogo() {
 
-    modeloResultados.clear();
+        modeloResultados.clear();
 
-    String sql =
-            "SELECT titulo, autor, categoria, estado " +
-            "FROM libros";
-
-    try (
-        Connection conexion = ConexionSQLite.conectar();
-        PreparedStatement ps = conexion.prepareStatement(sql);
-        ResultSet rs = ps.executeQuery()
-    ) {
-
-        while (rs.next()) {
-
-            String resultado =
-                    rs.getString("titulo") + " | "
-                    + rs.getString("autor") + " | "
-                    + rs.getString("categoria") + " | "
-                    + rs.getString("estado");
-
-            modeloResultados.addElement(resultado);
+        try {
+            for (String resultado : libro.obtenerTodos()) {
+                modeloResultados.addElement(resultado);
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Error al mostrar catálogo: " + e.getMessage()
+            );
         }
-
-    } catch (SQLException e) {
-
-        JOptionPane.showMessageDialog(
-                this,
-                "Error al mostrar catálogo: " + e.getMessage()
-        );
     }
-}
-
-    
 
     private String obtenerTituloSeleccionado() {
         String seleccionado = listaResultados.getSelectedValue();
@@ -246,46 +185,61 @@ public class miVentana extends JFrame {
         String titulo = obtenerTituloSeleccionado();
         if (titulo == null) return;
 
-        for (int i = 0; i < catalogo.length; i++) {
-            if (catalogo[i][0].equals(titulo)) {
+        DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy - hh:mm a");
+        String fechaFormateada = LocalDateTime.now().format(formato);
 
-                if (catalogo[i][3].equals(nuevoEstado)) {
-                    JOptionPane.showMessageDialog(
-                            this,
-                            nuevoEstado.equals("SEPARADO")
-                                    ? "El libro ya se encuentra SEPARADO."
-                                    : "No puedes devolver un libro que no has separado."
-                    );
-                    return;
-                }
+        try (Connection conexion = ConexionSQLite.conectar()) {
 
-                catalogo[i][3] = nuevoEstado;
+            conexion.setAutoCommit(false);
 
-                LocalDateTime ahora = LocalDateTime.now();
-                DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy - hh:mm a");
-                String fechaFormateada = ahora.format(formato);
+            String estadoActual = libro.obtenerEstado(conexion, titulo);
 
-                if (nuevoEstado.equals("SEPARADO")) {
-                    int codigo = (int) (Math.random() * 9000) + 1000;
-                    JOptionPane.showMessageDialog(
-                            this,
-                            "¡Libro separado con éxito!\nCódigo: CE-" + codigo + "\nFecha/Hora: " + fechaFormateada
-                    );
-                } else {
-                    JOptionPane.showMessageDialog(
-                            this,
-                            "Libro devuelto correctamente."
-                    );
-                }
-
-                actualizarResultados();
-
-                // Formato limpio sin iconos
-                String estadoTexto = nuevoEstado.equals("SEPARADO") ? "[SEPARADO]" : "[DEVUELTO]";
-                String registro = estadoTexto + "  " + titulo + "  •  Usuario: " + usuario.nombre + "  •  " + fechaFormateada;
-                modeloHistorial.add(0, registro);
+            if (estadoActual == null) {
+                JOptionPane.showMessageDialog(this, "El libro no existe en la base de datos.");
                 return;
             }
+
+            if (estadoActual.equals(nuevoEstado)) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        nuevoEstado.equals("SEPARADO")
+                                ? "El libro ya se encuentra SEPARADO."
+                                : "No puedes devolver un libro que no has separado."
+                );
+                return;
+            }
+            if (nuevoEstado.equals("DISPONIBLE")
+                    && !solicitud.perteneceA(conexion, titulo, usuario.correo)){
+                JOptionPane.showMessageDialog(this, "No puedes devolver un libro que otro lo ha separado"
+
+                );    
+                return;
+            }
+
+            libro.actualizarEstado(conexion, titulo, nuevoEstado);
+
+            String codigo = null;
+
+            if (nuevoEstado.equals("SEPARADO"))
+                codigo = "CE-" + ((int) (Math.random() * 9000) + 1000);
+
+            solicitud.registrar(conexion, titulo, usuario, codigo, fechaFormateada);
+
+            conexion.commit();
+
+            if (nuevoEstado.equals("SEPARADO")) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "¡Libro separado con éxito!\nCódigo: " + codigo + "\nFecha/Hora: " + fechaFormateada
+                );
+            } else {
+                JOptionPane.showMessageDialog(this, "Libro devuelto correctamente.");
+            }
+
+            actualizarResultados();
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al actualizar: " + e.getMessage());
         }
     }
 
@@ -297,10 +251,18 @@ public class miVentana extends JFrame {
         }
     }
 
-    // =========================================================================
-    //         APARTADO DE HISTORIAL SIN ICONOS (SOLO TEXTO Y FONDO AZUL)
-    // =========================================================================
+
     private void mostrarHistorial() {
+        
+        modeloHistorial.clear();
+        try {
+            for (String movimiento : solicitud.obtenerHistorial(usuario.correo))
+                modeloHistorial.addElement(movimiento);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+        }
+        
         if (modeloHistorial.isEmpty()) {
             JOptionPane.showMessageDialog(
                     this,
@@ -311,7 +273,6 @@ public class miVentana extends JFrame {
             return;
         }
 
-        // Panel de información del usuario en la parte superior sin iconos
         JPanel panelUsuario = new JPanel(new GridLayout(2, 1, 2, 2));
         panelUsuario.setBackground(AZUL);
         panelUsuario.setBorder(new EmptyBorder(0, 0, 10, 0));
@@ -327,7 +288,7 @@ public class miVentana extends JFrame {
         panelUsuario.add(lblUsuario);
         panelUsuario.add(lblCorreo);
 
-        // Lista del historial de transacciones en texto limpio
+                //muestra la lista
         JList<String> listaHistorial = new JList<>(modeloHistorial);
         listaHistorial.setFont(new Font("Segoe UI", Font.BOLD, 12));
         listaHistorial.setBackground(Color.WHITE);
@@ -336,7 +297,6 @@ public class miVentana extends JFrame {
         listaHistorial.setSelectionForeground(Color.WHITE);
         listaHistorial.setFixedCellHeight(32);
 
-        // Scroll Pane con bordes blancos
         JScrollPane scroll = new JScrollPane(listaHistorial);
         scroll.setPreferredSize(new Dimension(620, 240));
         scroll.getViewport().setBackground(Color.WHITE);
@@ -349,31 +309,27 @@ public class miVentana extends JFrame {
                 Color.WHITE
         ));
 
-        // Panel interno contenedor azul
         JPanel panelHistorial = new JPanel(new BorderLayout());
         panelHistorial.setBackground(AZUL);
         panelHistorial.setBorder(new EmptyBorder(15, 15, 15, 15));
         panelHistorial.add(panelUsuario, BorderLayout.NORTH);
         panelHistorial.add(scroll, BorderLayout.CENTER);
 
-        // Ajustar UIManager para pintar el fondo exterior del diálogo de Azul
         UIManager.put("OptionPane.background", AZUL);
         UIManager.put("Panel.background", AZUL);
-
-        // Crear el JOptionPane personalizado
+                ///panel de opciones
         JOptionPane optionPane = new JOptionPane(
                 panelHistorial,
                 JOptionPane.PLAIN_MESSAGE,
                 JOptionPane.DEFAULT_OPTION,
                 null,
-                new Object[]{}, 
+                new Object[]{},
                 null
         );
 
         JDialog dialog = optionPane.createDialog(this, "Historial de Transacciones");
         dialog.getContentPane().setBackground(AZUL);
 
-        // Botón "Cerrar" personalizado
         JButton btnCerrar = new JButton("Cerrar");
         btnCerrar.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnCerrar.setForeground(AZUL);
@@ -393,7 +349,6 @@ public class miVentana extends JFrame {
 
         dialog.setVisible(true);
 
-        // Restaurar UIManager por defecto
         UIManager.put("OptionPane.background", null);
         UIManager.put("Panel.background", null);
     }
